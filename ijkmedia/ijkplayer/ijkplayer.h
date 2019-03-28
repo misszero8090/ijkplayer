@@ -218,4 +218,8 @@ void           *ijkmp_set_weak_thiz(IjkMediaPlayer *mp, void *weak_thiz);
 int             ijkmp_get_msg(IjkMediaPlayer *mp, AVMessage *msg, int block);
 void            ijkmp_set_frame_at_time(IjkMediaPlayer *mp, const char *path, int64_t start_time, int64_t end_time, int num, int definition);
 
+int ijkmp_start_recording(IjkMediaPlayer *mp,const char *filePath);
+int ijkmp_stop_recording(IjkMediaPlayer *mp);;
+int ijkmp_isRecording(IjkMediaPlayer *mp);
+
 #endif
