@@ -103,6 +103,9 @@ typedef NS_ENUM(NSInteger, IJKMPMovieTimeOption) {
 
 - (UIImage *)thumbnailImageAtCurrentTime;
 
+- (void)stopRecord;
+- (void)startRecordWithFileName:(NSString *)fileName;
+
 #pragma mark Notifications
 
 #ifdef __cplusplus

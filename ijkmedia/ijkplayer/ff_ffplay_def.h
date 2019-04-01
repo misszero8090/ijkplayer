@@ -728,10 +728,8 @@ typedef struct FFPlayer {
     int record_error;
     
     int is_first;                       // 第一帧数据
-    int64_t start_v_pts;                // 开始录制时pts 视频
-    int64_t start_v_dts;                // 开始录制时dts 视频
-    int64_t start_a_pts;                // 开始录制时pts 音频
-    int64_t start_a_dts;                // 开始录制时dts 音频
+    int64_t start_pts;                  // 开始录制时pts
+    int64_t start_dts;                  // 开始录制时dts
 } FFPlayer;
 
 #define fftime_to_milliseconds(ts) (av_rescale(ts, 1000, AV_TIME_BASE))

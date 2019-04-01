@@ -51,6 +51,7 @@ int ijkmp_start_recording(IjkMediaPlayer *mp,const char *filePath)
     pthread_mutex_lock(&mp->mutex);
     av_log(mp->ffplayer,AV_LOG_WARNING,"cjz ijkmp_start_recording");
     int retval = ijkmp_start_recording_l(mp,filePath);
+    printf("ijkmp_start_recording return == %d\n",retval);
     pthread_mutex_unlock(&mp->mutex);
     return retval;
 }

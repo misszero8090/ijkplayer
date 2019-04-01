@@ -226,18 +226,17 @@ int ffp_record_isfinished_l(FFPlayer *ffp)
     return 0;
 }
 
-int ffp_record_file(FFPlayer *ffp, AVPacket *packet)
-{
+int ffp_record_file(FFPlayer *ffp, AVPacket *packet){
     assert(ffp);
     VideoState *is = ffp->is;
     int ret = 0;
     AVStream *in_stream;
     AVStream *out_stream;
-    
     if (ffp->is_record) {
         if (packet == NULL) {
             ffp->record_error = 1;
             av_log(ffp, AV_LOG_ERROR, "packet == NULL");
+            printf("ffp_record_file return null 1");
             return -1;
         }
         
@@ -250,14 +249,10 @@ int ffp_record_file(FFPlayer *ffp, AVPacket *packet)
                 pkt->pts = 0;
                 pkt->dts = 0;
             } else { // 之后的每一帧都要减去，点击开始录制时的值，这样的时间才是正确的
-                if (pkt->stream_index == AVMEDIA_TYPE_AUDIO) {
-//                    pkt->pts = llabs(pkt->pts - ffp->start_a_pts);
-//                    pkt->dts = llabs(pkt->dts - ffp->start_a_dts);
-                    
-                }
-                else if (pkt->stream_index == AVMEDIA_TYPE_VIDEO) {
-//                    pkt->pts = pkt->dts = llabs(pkt->dts - ffp->start_v_dts);
-                }
+                
+                pkt->pts = llabs(pkt->pts - ffp->start_pts);
+                pkt->dts = llabs(pkt->dts - ffp->start_dts);
+                printf("AVMEDIA_TYPE_VIDEO pkt->pts == %lld pkt->dts == %lld\n",pkt->pts,pkt->dts);
             }
             
             in_stream  = is->ic->streams[pkt->stream_index];
@@ -278,8 +273,10 @@ int ffp_record_file(FFPlayer *ffp, AVPacket *packet)
             pthread_mutex_unlock(&ffp->record_mutex);
         } else {
             av_log(ffp, AV_LOG_ERROR, "av_packet_ref == NULL");
+            printf("ffp_record_file return null 2");
         }
     }
+    printf("ffp_record_file return null 3 == %d\n",ret);
     return ret;
 }
 
@@ -794,7 +791,20 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                     return -1;
             }
         } while (d->queue->serial != d->pkt_serial);
-
+        //插入
+        if (!ffp->is_first && pkt.pts == pkt.dts) { // 获取开始录制前dts等于pts最后的值，用于
+            ffp->start_pts = pkt.pts;
+            ffp->start_dts = pkt.dts;
+        }
+#pragma  mark - 录制插入
+        if (ffp->is_record) { // 可以录制时，写入文件
+            if (0 != ffp_record_file(ffp, &pkt)) {
+                ffp->record_error = 1;
+                ffp_stop_recording_l(ffp);
+                printf("avcodec_send_packet stop\n");
+            }
+        }
+        
         if (pkt.data == flush_pkt.data) {
             avcodec_flush_buffers(d->avctx);
             d->finished = 0;
@@ -3514,27 +3524,21 @@ static int read_thread(void *arg)
     }
 
     for (;;) {
-        //插入
-        if (!ffp->is_first && pkt->pts == pkt->dts) { // 获取开始录制前dts等于pts最后的值，用于
-            if (pkt->stream_index == AVMEDIA_TYPE_AUDIO) {
-                ffp->start_a_pts = pkt->pts;
-                ffp->start_a_dts = pkt->dts;
-            }
-        }
-        if (pkt->stream_index == AVMEDIA_TYPE_VIDEO) {
-            if (!ffp->is_first) {
-                ffp->start_v_pts = pkt->pts;
-                ffp->start_v_dts = pkt->dts;
-            }
-        }
-#pragma  mark - 录制插入
-        if (ffp->is_record) { // 可以录制时，写入文件
-            if (0 != ffp_record_file(ffp, pkt)) {
-                ffp->record_error = 1;
-                ffp_stop_recording_l(ffp);
-            }
-        }
         
+//        //插入
+//        if (!ffp->is_first && pkt->pts == pkt->dts) { // 获取开始录制前dts等于pts最后的值，用于
+//            ffp->start_pts = pkt->pts;
+//            ffp->start_dts = pkt->dts;
+//        }
+//#pragma  mark - 录制插入
+//        if (ffp->is_record) { // 可以录制时，写入文件
+//            if (0 != ffp_record_file(ffp, pkt)) {
+//                ffp->record_error = 1;
+//                ffp_stop_recording_l(ffp);
+//                printf("avcodec_send_packet stop\n");
+//            }
+//        }
+
         if (is->abort_request)
             break;
 #ifdef FFP_MERGE
